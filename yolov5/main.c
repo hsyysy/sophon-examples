@@ -10,16 +10,8 @@
 #include "utils.h"
 
 int main(int argc, char** argv){
-    unsigned int card_num;
-    bm_get_card_num(&card_num);
-
-    unsigned int total_dev = 0;
-    for (int i=0;i<card_num;i++){
-        unsigned int chip_num;
-        unsigned int dev_start_index;
-        bm_get_chip_num_from_card(0, &chip_num, &dev_start_index);
-        total_dev += chip_num;
-    }
+    unsigned int total_dev;
+    bm_dev_getcount(&total_dev);
     //printf("Total devices num = %d\n",total_dev);
 
     // request bm_handle

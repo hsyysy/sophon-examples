@@ -10,19 +10,19 @@
 #include "utils.h"
 
 int main(int argc, char** argv){
-    unsigned int total_dev;
+    unsigned total_dev;
     bm_dev_getcount(&total_dev);
     //printf("Total devices num = %d\n",total_dev);
 
     // request bm_handle
     bm_handle_t bm_handle;
     bm_status_t status;
-    unsigned int dev_id = 0;
+    unsigned dev_id = 0;
     for (;dev_id < total_dev;dev_id++){
         status = bm_dev_request(&bm_handle, dev_id);
         assert(BM_SUCCESS == status);
 
-        unsigned int p_chipid;
+        unsigned p_chipid;
         bm_get_chipid(bm_handle, &p_chipid);
         if (p_chipid == 0x1684){
             //printf("chip = BM1684\n");
@@ -113,7 +113,7 @@ int main(int argc, char** argv){
         assert(BM_SUCCESS == status);
     }
 
-    //int result = stbi_write_bmp("check.bmp", 640, 640, channels, (void*)resized_img);
+    //int result = stbi_write_bmp("check.bmp", net_w, net_h, channels, (void*)resized_img);
 
     // prepare input tensor and output tensor
     bm_tensor_t input_tensors[1];
@@ -133,9 +133,12 @@ int main(int argc, char** argv){
     }
     // fill the input_data from resized_img
     for (int k=0;k<channels;k++){
+        unsigned channel_id = k*net_h*net_w;
         for (int i=0;i<net_h;i++){
+            unsigned w_id = i*net_w;
+            unsigned wh_id = channel_id + w_id;
             for (int j=0;j<net_w;j++){
-                input_data[0][k*net_h*net_w + i*net_w + j] = (float)resized_img[(i*net_w+j)*channels + k]/255.0;
+                input_data[0][wh_id + j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
             }
         }
     }

@@ -83,14 +83,14 @@ int main(int argc, char** argv){
 
     // 初始化resized_img
     int net_h = net_info->stages[0].input_shapes->dims[2];
-    int net_w  = net_info->stages[0].input_shapes->dims[3];
+    int net_w = net_info->stages[0].input_shapes->dims[3];
 
     // prepare resized_img memory
     unsigned char *resized_img;
     bm_device_mem_t resized_img_dev;
     if (is_soc){
         bm_malloc_device_byte(bm_handle, &resized_img_dev, net_w * net_h * channels);
-        status = bm_mem_mmap_device_mem(bm_handle, &resized_img_dev, (long long unsigned int*)&resized_img);
+        status = bm_mem_mmap_device_mem(bm_handle, &resized_img_dev, (void*)&resized_img);
         assert(BM_SUCCESS == status);
     } else {
         resized_img = (unsigned char *)malloc(net_w * net_h * channels);
@@ -126,7 +126,7 @@ int main(int argc, char** argv){
     // prepare input data memory
     float* input_data[1];
     if(is_soc){
-        status = bm_mem_mmap_device_mem(bm_handle, &input_tensors[0].device_mem, (long long unsigned int*)&input_data[0]);
+        status = bm_mem_mmap_device_mem(bm_handle, &input_tensors[0].device_mem, (void*)&input_data[0]);
         assert(BM_SUCCESS == status);
     } else {
         input_data[0] = (float*)malloc(channels*net_w*net_h*sizeof(float));
@@ -148,7 +148,7 @@ int main(int argc, char** argv){
         bm_free_device(bm_handle, resized_img_dev);
     } else {
         free(resized_img);
-        bm_memcpy_s2d_partial(bm_handle, input_tensors[0].device_mem, (void *)input_data, bmrt_tensor_bytesize(&input_tensors[0]));
+        bm_memcpy_s2d_partial(bm_handle, input_tensors[0].device_mem, (void *)input_data[0], bmrt_tensor_bytesize(&input_tensors[0]));
         free(input_data[0]);
     }
 
@@ -163,7 +163,7 @@ int main(int argc, char** argv){
     float* output[3];
     if (is_soc){
         for (int i=0;i<3;i++){
-            status = bm_mem_mmap_device_mem(bm_handle, &output_tensors[i].device_mem, (unsigned long long int*)&output[i]);
+            status = bm_mem_mmap_device_mem(bm_handle, &output_tensors[i].device_mem, (void*)&output[i]);
             assert(BM_SUCCESS == status);
             status = bm_mem_invalidate_device_mem(bm_handle, &output_tensors[i].device_mem);
             assert(BM_SUCCESS == status);

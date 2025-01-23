@@ -41,7 +41,7 @@ void argmax(const float* data, int num, float* max_value, int* max_index){
 }
 
 #ifdef __SSE4_1__
-void argmax_sse(const float* m, int num, float* max_value, int *max_index)
+void argmax_sse(const float* data, int num, float* max_value, int *max_index)
 {
     float aMaxVal[4];
     int32_t aMaxIndex[4];
@@ -50,11 +50,11 @@ void argmax_sse(const float* m, int num, float* max_value, int *max_index)
     const __m128i vIndexInc = _mm_set1_epi32(4);
     __m128i vMaxIndex = _mm_setr_epi32(0, 1, 2, 3);
     __m128i vIndex = vMaxIndex;
-    __m128 vMaxVal = _mm_loadu_ps(m);
+    __m128 vMaxVal = _mm_loadu_ps(data);
 
     for (i = 4; i < num; i += 4)
     {
-        __m128 v = _mm_loadu_ps(&m[i]);
+        __m128 v = _mm_loadu_ps(&data[i]);
         __m128 vcmp = _mm_cmpgt_ps(v, vMaxVal);
         vIndex = _mm_add_epi32(vIndex, vIndexInc);
         vMaxVal = _mm_max_ps(vMaxVal, v);

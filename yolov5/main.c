@@ -320,18 +320,25 @@ int main(int argc, char** argv){
     float nmsConfidence = 0.6;
     int tx1 = 0;
     int ty1 = 0;
-    int num = NMS(yolobox, nmsConfidence, box_i);
+    bool* keep = (bool*)malloc(box_i*sizeof(bool));
+    memset(keep, true, box_i*sizeof(bool));
+    NMS(yolobox, keep, nmsConfidence, box_i);
+    //int num = NMS(yolobox, nmsConfidence, box_i);
     // plot the rect on the img
-    for (int i=0;i<num;i++){
-        struct YoloV5Box* box = &yolobox[i];
-        unsigned c = box->class_id * max_wh;
-        box->x  = (box->x - tx1 - c) / ratiox;
-        box->y  = (box->y - ty1 - c) / ratioy;
-        box->width  = (box->width) / ratiox;
-        box->height = (box->height) / ratioy;
-        draw_rect(img,box,width,height,colors[i]);
-        printf("class[%02d] = %s",i,lines[box->class_id]);
+    //for (int i=0;i<num;i++){
+    for (int i=0;i<box_i;i++){
+        if (keep[i]){
+            struct YoloV5Box* box = &yolobox[i];
+            unsigned c = box->class_id * max_wh;
+            box->x  = (box->x - tx1 - c) / ratiox;
+            box->y  = (box->y - ty1 - c) / ratioy;
+            box->width  = (box->width) / ratiox;
+            box->height = (box->height) / ratioy;
+            draw_rect(img,box,width,height,colors[i]);
+            printf("class[%02d]: scores = %f, label = %s",i,box->score,lines[box->class_id]);
+        }
     }
+    free(keep);
 
     // free the memory for coco.names
     for (int j = 0; j < i; ++j) {

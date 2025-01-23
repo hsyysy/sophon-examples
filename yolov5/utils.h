@@ -132,80 +132,37 @@ void argmax_neon(const float *data, int num, float* max_value, unsigned* max_ind
 }
 #endif
 
-// compare two struct scores
-int compare(const void* a, const void* b) {
-    struct YoloV5Box* structA = (struct YoloV5Box*)a;
-    struct YoloV5Box* structB = (struct YoloV5Box*)b;
+float calculate_iou(struct YoloV5Box* box1, struct YoloV5Box* box2, float* area1, float* area2) {
+    float x1 = fmaxf(box1->x, box2->x);
+    float y1 = fmaxf(box1->y, box2->y);
+    float x2 = fminf(box1->x+box1->width,  box2->x+box2->width);
+    float y2 = fminf(box1->y+box1->height, box2->y+box2->height);
 
-    if (structA->score < structB->score) {
-        return 1;  // 返回正值，表示 structA 应该排在 structB 后面
-    } else if (structA->score > structB->score) {
-        return -1; // 返回负值，表示 structA 应该排在 structB 前面
-    } else {
-        return 0;  // 返回 0，表示两者相等
-    }
+    float intersection = fmaxf(0.0f, x2 - x1 + 0.00001f) * fmaxf(0.0f, y2 - y1 + 0.00001f);
+
+    return intersection / (*area1 + *area2 - intersection);
 }
 
-// remove an element from data
-void removeElement(void* arr, int* n, int i, size_t elem_size) {
-    // make sure i is valid
-    if (i < 0 || i >= *n) {
-        printf("Invalid index\n");
-        return;
-    }
-
-    // move ahead for elements after i
-    for (int j = i; j < *n - 1; j++) {
-        // using memmove to avoid memory overlap
-        memmove((char*)arr + j * elem_size, (char*)arr + (j + 1) * elem_size, elem_size);
-    }
-
-    // renew n
-    (*n)--;
-
-    // re-allocate memory
-    arr = realloc(arr, (*n) * elem_size);
-    if (arr == NULL && *n > 0) {
-        printf("Memory reallocation failed\n");
-        exit(1);
-    }
-}
-
-// NMS function
-int NMS(struct YoloV5Box* dets, float nmsConfidence, int length) {
-    int num = length;
-    int index = length - 1;
-
-    qsort(dets, length, sizeof(struct YoloV5Box), compare);
-
+void NMS(struct YoloV5Box* dets, bool* keep, float nmsConfidence, int length){
     float* areas = (float*)malloc(length*sizeof(float));
     for (int i=0; i<length; i++) {
         areas[i] = dets[i].width * dets[i].height;
     }
-
-    int n1 = length;
-    int n2 = length;
-    while (index  > 0) {
-        int i = 0;
-        while (i < index) {
-            float left    = fmax(dets[index].x,  dets[i].x);
-            float top     = fmax(dets[index].y,  dets[i].y);
-            float right   = fmin(dets[index].x + dets[index].width,  dets[i].x + dets[i].width);
-            float bottom  = fmin(dets[index].y + dets[index].height, dets[i].y + dets[i].height);
-            float overlap = fmax(0.0f, right - left + 0.00001f) * fmax(0.0f, bottom - top + 0.00001f);
-            if (overlap / (areas[index] + areas[i] - overlap) > nmsConfidence) {
-                removeElement(areas, &n1, i,sizeof(areas[0]));
-                removeElement(dets, &n2, i,sizeof(dets[0]));
-                num --;
-                index --;
-            } else {
-                i++;
+    for (int i=0;i < length; i++){
+        for (int j = i + 1; j < length; j++) {
+            if (keep[j]) {
+                float iou = calculate_iou(dets + i, dets + j, areas + i, areas + j);
+                if (iou > nmsConfidence) {
+                    if (dets[i].score > dets[j].score) {
+                        keep[j] = false;
+                    } else {
+                        keep[i] = false;
+                    }
+                }
             }
         }
-        index--;
     }
     free(areas);
-    return num;
 }
 
 // draw rect on img

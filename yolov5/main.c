@@ -261,20 +261,19 @@ int main(int argc, char** argv){
             argmax(&ptr[5], m_class_num, &confidence, &class_id);
 #endif
             if (confidence * score > m_confThreshold) {
-                float centerX = ptr[0];
-                float centerY = ptr[1];
-                float width = ptr[2];
-                float height = ptr[3];
-
                 struct YoloV5Box* box = &yolobox[box_i];
-                box->x = centerX - width / 2 + class_id * max_wh;
-                if (box->x < 0) box->x = 0;
-                box->y = centerY - height / 2 + class_id * max_wh;
-                if (box->y < 0) box->y = 0;
-                box->width = width;
-                box->height = height;
+                unsigned c = class_id * max_wh;
+                float w = ptr[2];
+                float h = ptr[3];
+                box->x        = ptr[0] - w / 2 + c;
+                box->y        = ptr[1] - h / 2 + c;
+                box->width    = w;
+                box->height   = h;
                 box->class_id = class_id;
-                box->score = confidence * score;
+                box->score    = confidence * score;
+
+                if (box->x < 0) box->x = 0;
+                if (box->y < 0) box->y = 0;
                 box_i ++;
             }
         }

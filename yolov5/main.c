@@ -10,18 +10,17 @@
 #include "utils.h"
 
 int main(int argc, char** argv){
-    int total_dev;
-    bm_dev_getcount(&total_dev);
-    //printf("Total devices num = %d\n",total_dev);
-
     // request bm_handle
     bm_handle_t bm_handle;
     bm_status_t status;
-    unsigned dev_id = 0;
 #if defined(__arm__) || defined(__aarch64__)
-    status = bm_dev_request(&bm_handle, dev_id);
+    status = bm_dev_request(&bm_handle, 0);
     assert(BM_SUCCESS == status);
 #else
+    unsigned dev_id = 0;
+    int total_dev;
+    bm_dev_getcount(&total_dev);
+    //printf("Total devices num = %d\n",total_dev);
     for (;dev_id < total_dev;dev_id++){
         status = bm_dev_request(&bm_handle, dev_id);
         assert(BM_SUCCESS == status);

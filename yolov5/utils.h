@@ -149,15 +149,15 @@ void NMS(struct YoloV5Box* dets, bool* keep, float nmsConfidence, int length){
         areas[i] = dets[i].width * dets[i].height;
     }
     for (int i=0;i < length; i++){
+        if (!keep[i]) continue;
         for (int j = i + 1; j < length; j++) {
-            if (keep[j]) {
-                float iou = calculate_iou(dets + i, dets + j, areas + i, areas + j);
-                if (iou > nmsConfidence) {
-                    if (dets[i].score > dets[j].score) {
-                        keep[j] = false;
-                    } else {
-                        keep[i] = false;
-                    }
+            if (!keep[j]) continue;
+            float iou = calculate_iou(dets + i, dets + j, areas + i, areas + j);
+            if (iou > nmsConfidence) {
+                if (dets[i].score > dets[j].score) {
+                    keep[j] = false;
+                } else {
+                    keep[i] = false;
                 }
             }
         }

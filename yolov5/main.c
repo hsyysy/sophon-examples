@@ -10,7 +10,7 @@
 #include "utils.h"
 
 int main(int argc, char** argv){
-    unsigned total_dev;
+    int total_dev;
     bm_dev_getcount(&total_dev);
     //printf("Total devices num = %d\n",total_dev);
 
@@ -201,7 +201,6 @@ int main(int argc, char** argv){
         {{30, 61}, {62, 45}, {59, 119}},
         {{116, 90}, {156, 198}, {373, 326}}};
     int box_size[3] = {80,40,20};
-    int feat_c = 3;
     const int anchor_num = 3;
     int output_num = 3;
     int box_num = 25200; // 3*(80*80+40*40+20*20)
@@ -213,7 +212,7 @@ int main(int argc, char** argv){
         int feat_h = box_size[tidx];
         int feat_w = box_size[tidx];
         int area = feat_h * feat_w;
-        int feature_size = feat_h*feat_w*nout;
+        int feature_size = area*nout;
         for (int anchor_idx = 0; anchor_idx < anchor_num; anchor_idx++) {
             float *ptr = output[tidx] + anchor_idx*feature_size;
             for (int i = 0; i < area; i++) {
@@ -246,13 +245,13 @@ int main(int argc, char** argv){
 
     int m_class_num = 80;
     struct YoloV5Box* yolobox = (struct YoloV5Box*)malloc( box_num * sizeof(struct YoloV5Box));
-    int max_wh = 7680;
+    unsigned max_wh = 7680;
     int box_i = 0;
     for (int i = 0; i < box_num; i++) {
         float* ptr = data+i*nout;
         float score = ptr[4];
         if (score > m_confThreshold) {
-            int class_id = 0;
+            unsigned class_id = 0;
             float confidence = ptr[5];
 #ifdef __ARM_NEON
             argmax_neon(&ptr[5], m_class_num, &confidence, &class_id);
@@ -332,26 +331,7 @@ int main(int argc, char** argv){
         box->y  = (box->y - ty1) / ratioy;
         box->width  = (box->width) / ratiox;
         box->height = (box->height) / ratioy;
-        int x = (int)box->x;
-        int y = (int)box->y;
-        int w = (int)box->width;
-        int h = (int)box->height;
-        for (int j=0;j<w;j++){
-            img[3*( y   *width+x+j)  ] = colors[i][0];
-            img[3*( y   *width+x+j)+1] = colors[i][1];
-            img[3*( y   *width+x+j)+2] = colors[i][2];
-            img[3*((y+h)*width+x+j)  ] = colors[i][0];
-            img[3*((y+h)*width+x+j)+1] = colors[i][1];
-            img[3*((y+h)*width+x+j)+2] = colors[i][2];
-        }
-        for (int j=0;j<h;j++){
-            img[3*((y+j)*width+x)    ] = colors[i][0]; // R
-            img[3*((y+j)*width+x)  +1] = colors[i][1]; // G
-            img[3*((y+j)*width+x)  +2] = colors[i][2]; // B
-            img[3*((y+j)*width+x+w)  ] = colors[i][0]; // R
-            img[3*((y+j)*width+x+w)+1] = colors[i][1]; // G
-            img[3*((y+j)*width+x+w)+2] = colors[i][2]; // B
-        }
+        draw_rect(img,box,width,height,colors[i]);
         printf("class = %s",lines[box->class_id]);
     }
 
@@ -380,7 +360,7 @@ int main(int argc, char** argv){
         strcat(result_name, filename_without_extension);
         strcat(result_name, ".bmp");
     }
-    int result = stbi_write_bmp(result_name, width, height, channels, (void*)img);
+    stbi_write_bmp(result_name, width, height, channels, (void*)img);
     printf("Save result bmp to : %s\n", result_name);
 
     // free original image memory

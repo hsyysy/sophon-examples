@@ -21,7 +21,7 @@ const int colors[25][3] = {
 struct YoloV5Box {
     float x, y, width, height;
     float score;
-    int class_id;
+    unsigned class_id;
 };
 
 // sigmoid function
@@ -30,7 +30,7 @@ float sigmoid(float x){
 }
 
 // argmax function
-void argmax(const float* data, int num, float* max_value, int* max_index){
+void argmax(const float* data, int num, float* max_value, unsigned* max_index){
     for(int i = 1; i < num; ++i) {
         float value = data[i];
         if (value > *max_value) {
@@ -41,7 +41,7 @@ void argmax(const float* data, int num, float* max_value, int* max_index){
 }
 
 #ifdef __SSE4_1__
-void argmax_sse(const float* data, int num, float* max_value, int *max_index)
+void argmax_sse(const float* data, int num, float* max_value, unsigned *max_index)
 {
     float aMaxVal[4];
     int32_t aMaxIndex[4];
@@ -76,7 +76,7 @@ void argmax_sse(const float* data, int num, float* max_value, int *max_index)
 #endif
 
 #ifdef __ARM_NEON
-void argmax_neon(const float *data, int num, float* max_value, int* max_index) {
+void argmax_neon(const float *data, int num, float* max_value, unsigned* max_index) {
     // 初始化最大值向量和索引
     float32x4_t max_val_vec = vdupq_n_f32(-FLT_MAX);
     uint32x4_t max_idx_vec = vdupq_n_u32(0);
@@ -206,6 +206,31 @@ int NMS(struct YoloV5Box* dets, float nmsConfidence, int length) {
     }
     free(areas);
     return num;
+}
+
+// draw rect on img
+void draw_rect(unsigned char* img, const struct YoloV5Box* box,
+        const unsigned width, const unsigned height, const int* color){
+    int x = (int)box->x;
+    int y = (int)box->y;
+    int w = (int)box->width;
+    int h = (int)box->height;
+    for (int j=0;j<w;j++){
+        img[3*( y   *width+x+j)  ] = color[0];
+        img[3*( y   *width+x+j)+1] = color[1];
+        img[3*( y   *width+x+j)+2] = color[2];
+        img[3*((y+h)*width+x+j)  ] = color[0];
+        img[3*((y+h)*width+x+j)+1] = color[1];
+        img[3*((y+h)*width+x+j)+2] = color[2];
+    }
+    for (int j=0;j<h;j++){
+        img[3*((y+j)*width+x)    ] = color[0]; // R
+        img[3*((y+j)*width+x)  +1] = color[1]; // G
+        img[3*((y+j)*width+x)  +2] = color[2]; // B
+        img[3*((y+j)*width+x+w)  ] = color[0]; // R
+        img[3*((y+j)*width+x+w)+1] = color[1]; // G
+        img[3*((y+j)*width+x+w)+2] = color[2]; // B
+    }
 }
 
 // get filename without extension

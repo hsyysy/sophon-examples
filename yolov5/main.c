@@ -92,19 +92,11 @@ int main(int argc, char** argv){
     // initialize resized_img
     int net_h = net_info->stages[0].input_shapes->dims[2];
     int net_w = net_info->stages[0].input_shapes->dims[3];
-    unsigned char *resized_img;
-    bm_device_mem_t resized_img_dev;
-    if (is_soc){
-        bm_malloc_device_byte(bm_handle, &resized_img_dev, net_w * net_h * channels);
-        status = bm_mem_mmap_device_mem(bm_handle, &resized_img_dev, (void*)&resized_img);
-        assert(BM_SUCCESS == status);
-    } else {
-        resized_img = (unsigned char *)malloc(net_w * net_h * channels);
-        if (resized_img == NULL) {
-            printf("Unable to allocate memory for the resized image.\n");
-            stbi_image_free(img);
-            exit(1);
-        }
+    unsigned char *resized_img = (unsigned char *)malloc(net_w * net_h * channels);
+    if (resized_img == NULL) {
+        printf("Unable to allocate memory for the resized image.\n");
+        stbi_image_free(img);
+        exit(1);
     }
 
     // using stb_image_resize to resize
@@ -113,10 +105,6 @@ int main(int argc, char** argv){
             stbi_image_free(img);
             free(resized_img);
             exit(1);
-    }
-    if (is_soc){
-        status = bm_mem_flush_device_mem(bm_handle, &resized_img_dev);
-        assert(BM_SUCCESS == status);
     }
 
     //int result = stbi_write_bmp("check.bmp", net_w, net_h, channels, (void*)resized_img);
@@ -149,21 +137,14 @@ int main(int argc, char** argv){
             }
         }
     }
+    free(resized_img);
     // link the input_data with the input tensor
     if(is_soc){
-        // resized_img
-        status = bm_mem_unmap_device_mem(bm_handle, resized_img, bm_mem_get_device_size(resized_img_dev));
-        assert(BM_SUCCESS == status);
-        bm_free_device(bm_handle, resized_img_dev);
-        // input_tensor
         status = bm_mem_flush_device_mem(bm_handle, &input_tensors[0].device_mem);
-        assert(BM_SUCCESS == status);
     } else {
-        // resized_img
-        free(resized_img);
-        // input_tensor
-        bm_memcpy_s2d_partial(bm_handle, input_tensors[0].device_mem, (void *)input_data[0], bmrt_tensor_bytesize(&input_tensors[0]));
+        status = bm_memcpy_s2d_partial(bm_handle, input_tensors[0].device_mem, (void *)input_data[0], bmrt_tensor_bytesize(&input_tensors[0]));
     }
+    assert(BM_SUCCESS == status);
 
     // do inference
     ret = bmrt_launch_tensor_ex(p_bmrt, net_names[0], input_tensors, 1, output_tensors, 3, true, false);

@@ -325,14 +325,13 @@ int main(int argc, char** argv){
     // plot the rect on the img
     for (int i=0;i<num;i++){
         struct YoloV5Box* box = &yolobox[i];
-        box->x -= box->class_id * max_wh;
-        box->y -= box->class_id * max_wh;
-        box->x  = (box->x - tx1) / ratiox;
-        box->y  = (box->y - ty1) / ratioy;
+        unsigned c = box->class_id * max_wh;
+        box->x  = (box->x - tx1 - c) / ratiox;
+        box->y  = (box->y - ty1 - c) / ratioy;
         box->width  = (box->width) / ratiox;
         box->height = (box->height) / ratioy;
         draw_rect(img,box,width,height,colors[i]);
-        printf("class = %s",lines[box->class_id]);
+        printf("class[%02d] = %s",i,lines[box->class_id]);
     }
 
     // free the memory for coco.names

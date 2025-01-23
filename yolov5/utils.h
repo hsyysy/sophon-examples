@@ -1,6 +1,11 @@
-#if defined(__arm__) || defined(__aarch64__)
-#include <arm_neon.h>
 #include <float.h>
+
+#ifdef __SSE4_1__
+#include <smmintrin.h>
+#endif
+
+#ifdef __ARM_NEON
+#include <arm_neon.h>
 #endif
 
 // rect color list
@@ -26,7 +31,7 @@ float sigmoid(float x){
 
 // argmax function
 void argmax(const float* data, int num, float* max_value, int* max_index){
-    for(int i = 0; i < num; ++i) {
+    for(int i = 1; i < num; ++i) {
         float value = data[i];
         if (value > *max_value) {
             *max_value = value;
@@ -35,7 +40,42 @@ void argmax(const float* data, int num, float* max_value, int* max_index){
   }
 }
 
-#if defined(__arm__) || defined(__aarch64__)
+#ifdef __SSE4_1__
+void argmax_sse(const float* m, int num, float* max_value, int *max_index)
+{
+    float aMaxVal[4];
+    int32_t aMaxIndex[4];
+    int i;
+
+    const __m128i vIndexInc = _mm_set1_epi32(4);
+    __m128i vMaxIndex = _mm_setr_epi32(0, 1, 2, 3);
+    __m128i vIndex = vMaxIndex;
+    __m128 vMaxVal = _mm_loadu_ps(m);
+
+    for (i = 4; i < num; i += 4)
+    {
+        __m128 v = _mm_loadu_ps(&m[i]);
+        __m128 vcmp = _mm_cmpgt_ps(v, vMaxVal);
+        vIndex = _mm_add_epi32(vIndex, vIndexInc);
+        vMaxVal = _mm_max_ps(vMaxVal, v);
+        vMaxIndex = _mm_blendv_epi8(vMaxIndex, vIndex, _mm_castps_si128(vcmp));
+    }
+    _mm_storeu_ps(aMaxVal, vMaxVal);
+    _mm_storeu_si128((__m128i *)aMaxIndex, vMaxIndex);
+    *max_value = aMaxVal[0];
+    *max_index = aMaxIndex[0];
+    for (i = 1; i < 4; ++i)
+    {
+        if (aMaxVal[i] > *max_value)
+        {
+            *max_value = aMaxVal[i];
+            *max_index = aMaxIndex[i];
+        }
+    }
+}
+#endif
+
+#ifdef __ARM_NEON
 void argmax_neon(const float *data, int num, float* max_value, int* max_index) {
     // 初始化最大值向量和索引
     float32x4_t max_val_vec = vdupq_n_f32(-FLT_MAX);

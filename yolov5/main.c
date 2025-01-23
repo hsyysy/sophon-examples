@@ -252,10 +252,12 @@ int main(int argc, char** argv){
         float* ptr = data+i*nout;
         float score = ptr[4];
         if (score > m_confThreshold) {
-            int class_id;
+            int class_id = 0;
             float confidence = ptr[5];
-#if defined(__arm__) || defined(__aarch64__)
+#ifdef __ARM_NEON
             argmax_neon(&ptr[5], m_class_num, &confidence, &class_id);
+#elif defined __SSE4_1__
+            argmax_sse(&ptr[5], m_class_num, &confidence, &class_id);
 #else
             argmax(&ptr[5], m_class_num, &confidence, &class_id);
 #endif

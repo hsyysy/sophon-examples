@@ -1,3 +1,8 @@
+#if defined(__arm__) || defined(__aarch64__)
+#include <arm_neon.h>
+#include <float.h>
+#endif
+
 // rect color list
 const int colors[25][3] = {
     {255, 0, 0}, {255, 85, 0}, {255, 170, 0}, {255, 255, 0}, {170, 255, 0}, \
@@ -20,19 +25,72 @@ float sigmoid(float x){
 }
 
 // argmax function
-int argmax(float* data, int num){
-    float max_value = 0.0;
-    int max_index = 0;
+void argmax(const float* data, int num, float* max_value, int* max_index){
     for(int i = 0; i < num; ++i) {
         float value = data[i];
-        if (value > max_value) {
-            max_value = value;
-            max_index = i;
+        if (value > *max_value) {
+            *max_value = value;
+            *max_index = i;
         }
   }
-
-  return max_index;
 }
+
+#if defined(__arm__) || defined(__aarch64__)
+void argmax_neon(const float *data, int num, float* max_value, int* max_index) {
+    // 初始化最大值向量和索引
+    float32x4_t max_val_vec = vdupq_n_f32(-FLT_MAX);
+    uint32x4_t max_idx_vec = vdupq_n_u32(0);
+
+    // 当前处理的基准索引
+    uint32x4_t base_idx_vec = {0, 1, 2, 3};
+    // 索引增量
+    uint32x4_t idx_increment = vdupq_n_u32(4);
+
+    // 用于跟踪全局最大值和索引
+    float max_val = -FLT_MAX;
+    int max_idx = -1;
+
+    int i;
+    for (i = 0; i <= num - 4; i += 4) {
+        // 加载数据
+        float32x4_t data_vec = vld1q_f32(data + i);
+
+        // 比较向量中的元素，更新最大值和索引
+        uint32x4_t mask = vcgtq_f32(data_vec, max_val_vec);
+        max_val_vec = vbslq_f32(mask, data_vec, max_val_vec);
+        max_idx_vec = vbslq_u32(mask, base_idx_vec, max_idx_vec);
+
+        // 更新基准索引
+        base_idx_vec = vaddq_u32(base_idx_vec, idx_increment);
+    }
+
+    // 处理剩余的元素
+    for (; i < num; i++) {
+        if (data[i] > max_val) {
+            max_val = data[i];
+            max_idx = i;
+        }
+    }
+
+    // 将向量中的最大值和索引提取到标量中
+    float max_vals[4];
+    uint32_t max_idxs[4];
+    vst1q_f32(max_vals, max_val_vec);
+    vst1q_u32(max_idxs, max_idx_vec);
+
+    // 在向量结果中找到最终的最大值和索引
+    for (int j = 0; j < 4; j++) {
+        if (max_vals[j] > max_val) {
+            max_val = max_vals[j];
+            max_idx = max_idxs[j];
+        }
+    }
+
+    // 返回结果
+    *max_value = max_val;
+    *max_index = max_idx;
+}
+#endif
 
 // compare two struct scores
 int compare(const void* a, const void* b) {

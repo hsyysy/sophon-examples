@@ -18,6 +18,10 @@ int main(int argc, char** argv){
     bm_handle_t bm_handle;
     bm_status_t status;
     unsigned dev_id = 0;
+#if defined(__arm__) || defined(__aarch64__)
+    status = bm_dev_request(&bm_handle, dev_id);
+    assert(BM_SUCCESS == status);
+#else
     for (;dev_id < total_dev;dev_id++){
         status = bm_dev_request(&bm_handle, dev_id);
         assert(BM_SUCCESS == status);
@@ -38,6 +42,7 @@ int main(int argc, char** argv){
             break;
         }
     }
+#endif
 
     // determine whether is soc
     struct bm_misc_info misc_info;
@@ -144,15 +149,18 @@ int main(int argc, char** argv){
     }
     // link the input_data with the input tensor
     if(is_soc){
-        status = bm_mem_flush_device_mem(bm_handle, &input_tensors[0].device_mem);
-        assert(BM_SUCCESS == status);
+        // resized_img
         status = bm_mem_unmap_device_mem(bm_handle, resized_img, bm_mem_get_device_size(resized_img_dev));
         assert(BM_SUCCESS == status);
         bm_free_device(bm_handle, resized_img_dev);
+        // input_tensor
+        status = bm_mem_flush_device_mem(bm_handle, &input_tensors[0].device_mem);
+        assert(BM_SUCCESS == status);
     } else {
+        // resized_img
         free(resized_img);
+        // input_tensor
         bm_memcpy_s2d_partial(bm_handle, input_tensors[0].device_mem, (void *)input_data[0], bmrt_tensor_bytesize(&input_tensors[0]));
-        free(input_data[0]);
     }
 
     // do inference
@@ -161,6 +169,13 @@ int main(int argc, char** argv){
 
     // sync, wait for finishing inference
     bm_thread_sync(bm_handle);
+
+    if (is_soc){
+        status = bm_mem_unmap_device_mem(bm_handle, input_data[0], bm_mem_get_device_size(input_tensors[0].device_mem));
+        assert(BM_SUCCESS == status);
+    } else {
+        free(input_data[0]);
+    }
 
     // prepare output data
     float* output[3];
@@ -218,6 +233,16 @@ int main(int argc, char** argv){
             }
         }
     }
+    if (is_soc){
+        for (int i=0;i<3;i++){
+            status = bm_mem_unmap_device_mem(bm_handle, output[i], bm_mem_get_device_size(output_tensors[i].device_mem));
+            assert(BM_SUCCESS == status);
+        }
+    } else {
+        for (int i=0;i<3;i++){
+            free(output[i]);
+        }
+    }
 
     int m_class_num = 80;
     struct YoloV5Box* yolobox = (struct YoloV5Box*)malloc( box_num * sizeof(struct YoloV5Box));
@@ -227,8 +252,13 @@ int main(int argc, char** argv){
         float* ptr = data+i*nout;
         float score = ptr[4];
         if (score > m_confThreshold) {
-            int class_id = argmax(&ptr[5], m_class_num);
-            float confidence = ptr[class_id + 5];
+            int class_id;
+            float confidence = ptr[5];
+#if defined(__arm__) || defined(__aarch64__)
+            argmax_neon(&ptr[5], m_class_num, &confidence, &class_id);
+#else
+            argmax(&ptr[5], m_class_num, &confidence, &class_id);
+#endif
             if (confidence * score > m_confThreshold) {
                 float centerX = ptr[0];
                 float centerY = ptr[1];
@@ -356,24 +386,11 @@ int main(int argc, char** argv){
 
     // free result box struct
     free(yolobox);
-    if (!is_soc){
-        for (int i=0;i<3;i++){
-            free(output[i]);
-        }
-    }
     // at last, free device memory
     for (int i = 0; i < net_info->input_num; ++i) {
-        if (is_soc){
-            status = bm_mem_unmap_device_mem(bm_handle, input_data[i], bm_mem_get_device_size(input_tensors[i].device_mem));
-            assert(BM_SUCCESS == status);
-        }
         bm_free_device(bm_handle, input_tensors[i].device_mem);
     }
     for (int i = 0; i < net_info->output_num; ++i) {
-        if (is_soc){
-            status = bm_mem_unmap_device_mem(bm_handle, output[i], bm_mem_get_device_size(output_tensors[i].device_mem));
-            assert(BM_SUCCESS == status);
-        }
         bm_free_device(bm_handle, output_tensors[i].device_mem);
     }
     bmrt_destroy(p_bmrt);

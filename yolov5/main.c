@@ -323,9 +323,7 @@ int main(int argc, char** argv){
     bool* keep = (bool*)malloc(box_i*sizeof(bool));
     memset(keep, true, box_i*sizeof(bool));
     NMS(yolobox, keep, nmsConfidence, box_i);
-    //int num = NMS(yolobox, nmsConfidence, box_i);
     // plot the rect on the img
-    //for (int i=0;i<num;i++){
     for (int i=0;i<box_i;i++){
         if (keep[i]){
             struct YoloV5Box* box = &yolobox[i];

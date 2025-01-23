@@ -85,11 +85,9 @@ int main(int argc, char** argv){
     }
     printf("img: %s, width = %d, height = %d, channels = %d\n", img_path, width, height, channels);
 
-    // 初始化resized_img
+    // initialize resized_img
     int net_h = net_info->stages[0].input_shapes->dims[2];
     int net_w = net_info->stages[0].input_shapes->dims[3];
-
-    // prepare resized_img memory
     unsigned char *resized_img;
     bm_device_mem_t resized_img_dev;
     if (is_soc){
@@ -136,13 +134,14 @@ int main(int argc, char** argv){
         input_data[0] = (float*)malloc(channels*net_w*net_h*sizeof(float));
     }
     // fill the input_data from resized_img
+    // input data is CHW, but resized_img is HWC
     for (int k=0;k<channels;k++){
         unsigned channel_id = k*net_h*net_w;
         for (int i=0;i<net_h;i++){
             unsigned w_id = i*net_w;
-            unsigned wh_id = channel_id + w_id;
+            float* input_temp = input_data[0] + channel_id + w_id;
             for (int j=0;j<net_w;j++){
-                input_data[0][wh_id + j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
+                input_temp[j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
             }
         }
     }

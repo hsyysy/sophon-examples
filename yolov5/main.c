@@ -253,9 +253,9 @@ int main(int argc, char** argv){
         if (score > m_confThreshold) {
             unsigned class_id = 0;
             float confidence = ptr[5];
-#ifdef __ARM_NEON
+#if defined(__ARM_NEON)
             argmax_neon(&ptr[5], m_class_num, &confidence, &class_id);
-#elif defined __SSE4_1__
+#elif defined(__SSE4_1__)
             argmax_sse(&ptr[5], m_class_num, &confidence, &class_id);
 #else
             argmax(&ptr[5], m_class_num, &confidence, &class_id);

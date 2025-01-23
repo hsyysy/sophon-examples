@@ -143,6 +143,7 @@ int main(int argc, char** argv){
         status = bm_mem_flush_device_mem(bm_handle, &input_tensors[0].device_mem);
     } else {
         status = bm_memcpy_s2d_partial(bm_handle, input_tensors[0].device_mem, (void *)input_data[0], bmrt_tensor_bytesize(&input_tensors[0]));
+        free(input_data[0]);
     }
     assert(BM_SUCCESS == status);
 
@@ -156,8 +157,6 @@ int main(int argc, char** argv){
     if (is_soc){
         status = bm_mem_unmap_device_mem(bm_handle, input_data[0], bm_mem_get_device_size(input_tensors[0].device_mem));
         assert(BM_SUCCESS == status);
-    } else {
-        free(input_data[0]);
     }
 
     // prepare output data
@@ -228,7 +227,6 @@ int main(int argc, char** argv){
 
     int m_class_num = 80;
     struct YoloV5Box* yolobox = (struct YoloV5Box*)malloc( box_num * sizeof(struct YoloV5Box));
-    unsigned max_wh = 7680;
     int box_i = 0;
     for (int i = 0; i < box_num; i++) {
         float* ptr = data+i*nout;
@@ -243,20 +241,18 @@ int main(int argc, char** argv){
 #else
             argmax(&ptr[5], m_class_num, &confidence, &class_id);
 #endif
-            if (confidence * score > m_confThreshold) {
+            float final_score = confidence * score;
+            if (final_score > m_confThreshold) {
                 struct YoloV5Box* box = &yolobox[box_i];
-                unsigned c = class_id * max_wh;
                 float w = ptr[2];
                 float h = ptr[3];
-                box->x        = ptr[0] - w / 2 + c;
-                box->y        = ptr[1] - h / 2 + c;
+                box->x        = ptr[0] - w / 2;
+                box->y        = ptr[1] - h / 2;
                 box->width    = w;
                 box->height   = h;
                 box->class_id = class_id;
-                box->score    = confidence * score;
+                box->score    = final_score;
 
-                if (box->x < 0) box->x = 0;
-                if (box->y < 0) box->y = 0;
                 box_i ++;
             }
         }
@@ -300,9 +296,7 @@ int main(int argc, char** argv){
     // doing NMS
     float ratiox = (float)net_w/width;
     float ratioy = (float)net_h/height;
-    float nmsConfidence = 0.6;
-    int tx1 = 0;
-    int ty1 = 0;
+    float nmsConfidence = 0.1;
     bool* keep = (bool*)malloc(box_i*sizeof(bool));
     memset(keep, true, box_i*sizeof(bool));
     NMS(yolobox, keep, nmsConfidence, box_i);
@@ -311,11 +305,11 @@ int main(int argc, char** argv){
     for (int i=0;i<box_i;i++){
         if (keep[i]){
             struct YoloV5Box* box = &yolobox[i];
-            unsigned c = box->class_id * max_wh;
-            box->x  = (box->x - tx1 - c) / ratiox;
-            box->y  = (box->y - ty1 - c) / ratioy;
-            box->width  = (box->width) / ratiox;
+            box->x  = box->x / ratiox;
+            box->y  = box->y / ratioy;
+            box->width  = (box->width)  / ratiox;
             box->height = (box->height) / ratioy;
+            fix_box(box,width,height);
             draw_rect(img,box,width,height,colors[box_id]);
             box_id++;
             printf("class[%02d]: scores = %f, label = %s",box_id,box->score,lines[box->class_id]);

@@ -152,6 +152,7 @@ void NMS(struct YoloV5Box* dets, bool* keep, float nmsConfidence, int length){
         if (!keep[i]) continue;
         for (int j = i + 1; j < length; j++) {
             if (!keep[j]) continue;
+            if (dets[i].class_id != dets[j].class_id) continue;
             float iou = calculate_iou(dets + i, dets + j, areas + i, areas + j);
             if (iou > nmsConfidence) {
                 if (dets[i].score > dets[j].score) {
@@ -163,6 +164,22 @@ void NMS(struct YoloV5Box* dets, bool* keep, float nmsConfidence, int length){
         }
     }
     free(areas);
+}
+
+// fix box
+void fix_box(struct YoloV5Box* box, int width, int height){
+    box->width  = fminf(fmaxf(box->width,  0), width );
+    box->height = fminf(fmaxf(box->height, 0), height);
+    if ( box->x + box->width > width ) {
+        box->x = width - box->width;
+    } else if ( box->x < 0.0f ) {
+        box->x = 0.0f;
+    }
+    if (box->y + box->height > height ) {
+        box->y = height - box->height;
+    } else if (box->y < 0.0f ) {
+        box->y = 0.0f;
+    }
 }
 
 // draw rect on img

@@ -296,11 +296,12 @@ int main(int argc, char** argv){
     // doing NMS
     float ratiox = (float)net_w/width;
     float ratioy = (float)net_h/height;
-    float nmsConfidence = 0.1;
+    float nmsConfidence = 0.6;
     bool* keep = (bool*)malloc(box_i*sizeof(bool));
     memset(keep, true, box_i*sizeof(bool));
     NMS(yolobox, keep, nmsConfidence, box_i);
     unsigned box_id = 0;
+    size_t colors_num = sizeof(colors)/3/sizeof(int);
     // plot the rect on the img
     for (int i=0;i<box_i;i++){
         if (keep[i]){
@@ -310,13 +311,10 @@ int main(int argc, char** argv){
             box->width  = (box->width)  / ratiox;
             box->height = (box->height) / ratioy;
             fix_box(box,width,height);
-            draw_rect(img,box,width,height,colors[box_id]);
+            int color_id = box->class_id % colors_num;
+            draw_rect(img,box,width,height,colors[color_id]);
             box_id++;
             printf("class[%02d]: scores = %f, label = %s",box_id,box->score,lines[box->class_id]);
-            if (box_id == 25){
-                printf("colors not enough!\n");
-                exit(1);
-            }
         }
     }
     free(keep);

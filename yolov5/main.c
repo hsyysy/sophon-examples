@@ -143,6 +143,7 @@ int main(int argc, char** argv){
     } else {
         input_data[0] = (float*)calloc(channels*net_area,sizeof(float));
     }
+
     // fill the input_data from resized_img
     // input data is CHW, but resized_img is HWC
     float* input_temp0 = input_data[0] + start_y * net_w + start_x;
@@ -157,7 +158,8 @@ int main(int argc, char** argv){
         }
     }
     free(resized_img);
-    // link the input_data with the input tensor
+
+    // flush the cache or s2d
     if(is_soc){
         status = bm_mem_flush_device_mem(bm_handle, &input_tensors[0].device_mem);
     } else {
@@ -376,6 +378,7 @@ int main(int argc, char** argv){
     for (int i = 0; i < net_info->output_num; ++i) {
         bm_free_device(bm_handle, output_tensors[i].device_mem);
     }
+    free(net_names);
     bmrt_destroy(p_bmrt);
     bm_dev_free(bm_handle);
 

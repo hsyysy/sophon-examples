@@ -189,21 +189,23 @@ void draw_rect(unsigned char* img, const struct YoloV5Box* box,
     int y = (int)box->y;
     int w = (int)box->w;
     int h = (int)box->h;
+    int temp1 = 3*(y*width+x);
+    int temp2 = temp1 + 3*h*width;
     for (int j=0;j<w;j++){
-        img[3*( y   *width+x+j)  ] = color[0];
-        img[3*( y   *width+x+j)+1] = color[1];
-        img[3*( y   *width+x+j)+2] = color[2];
-        img[3*((y+h)*width+x+j)  ] = color[0];
-        img[3*((y+h)*width+x+j)+1] = color[1];
-        img[3*((y+h)*width+x+j)+2] = color[2];
+        unsigned char* img0 = img + 3*j;
+        unsigned char* img1 = img0 + temp1;
+        for (int i=0;i<3;i++) img1[i] = color[i];
+        unsigned char* img2 = img0 + temp2;
+        for (int i=0;i<3;i++) img2[i] = color[i];
     }
+    temp2 = temp1 + 3*w;
+    int jw = 3*width;
     for (int j=0;j<h;j++){
-        img[3*((y+j)*width+x)    ] = color[0]; // R
-        img[3*((y+j)*width+x)  +1] = color[1]; // G
-        img[3*((y+j)*width+x)  +2] = color[2]; // B
-        img[3*((y+j)*width+x+w)  ] = color[0]; // R
-        img[3*((y+j)*width+x+w)+1] = color[1]; // G
-        img[3*((y+j)*width+x+w)+2] = color[2]; // B
+        unsigned char* img0 = img + j*jw;
+        unsigned char* img1 = img0 + temp1;
+        for (int i=0;i<3;i++) img1[i] = color[i];
+        unsigned char* img2 = img0 + temp2;
+        for (int i=0;i<3;i++) img2[i] = color[i];
     }
 }
 

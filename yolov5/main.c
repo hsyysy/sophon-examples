@@ -94,7 +94,8 @@ int main(int argc, char** argv){
     // initialize resized_img
     int net_h = net_info->stages[0].input_shapes->dims[2];
     int net_w = net_info->stages[0].input_shapes->dims[3];
-    unsigned char *resized_img = (unsigned char *)malloc(net_w * net_h * channels);
+    int net_area = net_w*net_h;
+    unsigned char *resized_img = (unsigned char *)malloc(net_area * channels);
     if (resized_img == NULL) {
         printf("Unable to allocate memory for the resized image.\n");
         stbi_image_free(img);
@@ -140,17 +141,18 @@ int main(int argc, char** argv){
         status = bm_mem_mmap_device_mem(bm_handle, &input_tensors[0].device_mem, (void*)&input_data[0]);
         assert(BM_SUCCESS == status);
     } else {
-        input_data[0] = (float*)calloc(channels*net_w*net_h,sizeof(float));
+        input_data[0] = (float*)calloc(channels*net_area,sizeof(float));
     }
     // fill the input_data from resized_img
     // input data is CHW, but resized_img is HWC
+    float* input_temp0 = input_data[0] + start_y * net_w + start_x;
     for (int k=0;k<channels;k++){
-        unsigned channel_id = k*net_h*net_w;
+        float* input_temp1 = input_temp0 + k*net_area;
         for (int i=0;i<target_h;i++){
             unsigned w_id = i*target_w;
-            float* input_temp = input_data[0] + channel_id + (i+start_y)*net_w + start_x;
+            float* input_temp2 = input_temp1 + i*net_w;
             for (int j=0;j<target_w;j++){
-                input_temp[j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
+                input_temp2[j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
             }
         }
     }

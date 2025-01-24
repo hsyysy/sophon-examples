@@ -311,7 +311,6 @@ int main(int argc, char** argv){
     }
 
     // doing NMS
-    printf("ratiox = %f, ratioy = %f\n",ratiox,ratioy);
     float nmsConfidence = 0.6;
     bool* keep = (bool*)malloc(box_i*sizeof(bool));
     memset(keep, true, box_i*sizeof(bool));

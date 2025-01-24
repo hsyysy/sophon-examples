@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include "utils.h"
 
+#define KEEP_ASPECT
+
 int main(int argc, char** argv){
     // request bm_handle
     bm_handle_t bm_handle;
@@ -100,14 +102,29 @@ int main(int argc, char** argv){
     }
 
     // using stb_image_resize to resize
-    if (!stbir_resize_uint8_linear(img, width, height, 0, resized_img, net_w, net_h, 0, STBIR_RGB)) {
+    int target_w = net_w, target_h = net_h;
+    float ratiox = (float)net_w/width;
+    float ratioy = (float)net_h/height;
+    int start_x = 0, start_y = 0;
+#ifdef KEEP_ASPECT
+    if (ratiox < ratioy){
+        target_h = (int)(height * ratiox);
+        start_y = (int)(net_h-target_h)/2;
+        ratioy = ratiox;
+    } else {
+        target_w = (int)(width * ratioy);
+        start_x = (int)(net_w-target_w)/2;
+        ratiox = ratioy;
+    }
+#endif
+    if (!stbir_resize_uint8_linear(img, width, height, 0, resized_img, target_w, target_h, 0, STBIR_RGB)) {
             printf("Failed to resize image\n");
             stbi_image_free(img);
             free(resized_img);
             exit(1);
     }
 
-    //int result = stbi_write_bmp("check.bmp", net_w, net_h, channels, (void*)resized_img);
+    //stbi_write_bmp("check.bmp", target_w, target_h, channels, (void*)resized_img);
 
     // prepare input tensor and output tensor
     bm_tensor_t input_tensors[1];
@@ -123,16 +140,16 @@ int main(int argc, char** argv){
         status = bm_mem_mmap_device_mem(bm_handle, &input_tensors[0].device_mem, (void*)&input_data[0]);
         assert(BM_SUCCESS == status);
     } else {
-        input_data[0] = (float*)malloc(channels*net_w*net_h*sizeof(float));
+        input_data[0] = (float*)calloc(channels*net_w*net_h,sizeof(float));
     }
     // fill the input_data from resized_img
     // input data is CHW, but resized_img is HWC
     for (int k=0;k<channels;k++){
         unsigned channel_id = k*net_h*net_w;
-        for (int i=0;i<net_h;i++){
-            unsigned w_id = i*net_w;
-            float* input_temp = input_data[0] + channel_id + w_id;
-            for (int j=0;j<net_w;j++){
+        for (int i=0;i<target_h;i++){
+            unsigned w_id = i*target_w;
+            float* input_temp = input_data[0] + channel_id + (i+start_y)*net_w + start_x;
+            for (int j=0;j<target_w;j++){
                 input_temp[j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
             }
         }
@@ -246,10 +263,10 @@ int main(int argc, char** argv){
                 struct YoloV5Box* box = &yolobox[box_i];
                 float w = ptr[2];
                 float h = ptr[3];
-                box->x        = ptr[0] - w / 2;
-                box->y        = ptr[1] - h / 2;
-                box->width    = w;
-                box->height   = h;
+                box->x = ptr[0] - w / 2;
+                box->y = ptr[1] - h / 2;
+                box->w = w;
+                box->h = h;
                 box->class_id = class_id;
                 box->score    = final_score;
 
@@ -294,8 +311,7 @@ int main(int argc, char** argv){
     }
 
     // doing NMS
-    float ratiox = (float)net_w/width;
-    float ratioy = (float)net_h/height;
+    printf("ratiox = %f, ratioy = %f\n",ratiox,ratioy);
     float nmsConfidence = 0.6;
     bool* keep = (bool*)malloc(box_i*sizeof(bool));
     memset(keep, true, box_i*sizeof(bool));
@@ -306,13 +322,13 @@ int main(int argc, char** argv){
     for (int i=0;i<box_i;i++){
         if (keep[i]){
             struct YoloV5Box* box = &yolobox[i];
-            box->x  = box->x / ratiox;
-            box->y  = box->y / ratioy;
-            box->width  = (box->width)  / ratiox;
-            box->height = (box->height) / ratioy;
+            box->x = (box->x - start_x) / ratiox;
+            box->y = (box->y - start_y) / ratioy;
+            box->w = box->w / ratiox;
+            box->h = box->h / ratioy;
             fix_box(box,width,height);
             int color_id = box->class_id % colors_num;
-            draw_rect(img,box,width,height,colors[color_id]);
+            draw_rect(img,box,width,colors[color_id]);
             box_id++;
             printf("class[%02d]: scores = %f, label = %s",box_id,box->score,lines[box->class_id]);
         }

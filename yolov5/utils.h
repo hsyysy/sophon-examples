@@ -19,7 +19,7 @@ const int colors[25][3] = {
 
 // result struct
 struct YoloV5Box {
-    float x, y, width, height;
+    float x, y, w, h;
     float score;
     unsigned class_id;
 };
@@ -135,8 +135,8 @@ void argmax_neon(const float *data, int num, float* max_value, unsigned* max_ind
 float calculate_iou(struct YoloV5Box* box1, struct YoloV5Box* box2, float* area1, float* area2) {
     float x1 = fmaxf(box1->x, box2->x);
     float y1 = fmaxf(box1->y, box2->y);
-    float x2 = fminf(box1->x+box1->width,  box2->x+box2->width);
-    float y2 = fminf(box1->y+box1->height, box2->y+box2->height);
+    float x2 = fminf(box1->x+box1->w, box2->x+box2->w);
+    float y2 = fminf(box1->y+box1->h, box2->y+box2->h);
 
     float intersection = fmaxf(0.0f, x2 - x1 + 0.00001f) * fmaxf(0.0f, y2 - y1 + 0.00001f);
 
@@ -146,7 +146,7 @@ float calculate_iou(struct YoloV5Box* box1, struct YoloV5Box* box2, float* area1
 void NMS(struct YoloV5Box* dets, bool* keep, float nmsConfidence, int length){
     float* areas = (float*)malloc(length*sizeof(float));
     for (int i=0; i<length; i++) {
-        areas[i] = dets[i].width * dets[i].height;
+        areas[i] = dets[i].w* dets[i].h;
     }
     for (int i=0;i < length; i++){
         if (!keep[i]) continue;
@@ -168,15 +168,15 @@ void NMS(struct YoloV5Box* dets, bool* keep, float nmsConfidence, int length){
 
 // fix box
 void fix_box(struct YoloV5Box* box, int width, int height){
-    box->width  = fminf(fmaxf(box->width,  0), width );
-    box->height = fminf(fmaxf(box->height, 0), height);
-    if ( box->x + box->width > width ) {
-        box->x = width - box->width;
+    box->w = fminf(fmaxf(box->w, 0), width );
+    box->h = fminf(fmaxf(box->h, 0), height);
+    if ( box->x + box->w > width ) {
+        box->x = width - box->w;
     } else if ( box->x < 0.0f ) {
         box->x = 0.0f;
     }
-    if (box->y + box->height > height ) {
-        box->y = height - box->height;
+    if (box->y + box->h > height ) {
+        box->y = height - box->h;
     } else if (box->y < 0.0f ) {
         box->y = 0.0f;
     }
@@ -184,11 +184,11 @@ void fix_box(struct YoloV5Box* box, int width, int height){
 
 // draw rect on img
 void draw_rect(unsigned char* img, const struct YoloV5Box* box,
-        const unsigned width, const unsigned height, const int* color){
+        const unsigned width, const int* color){
     int x = (int)box->x;
     int y = (int)box->y;
-    int w = (int)box->width;
-    int h = (int)box->height;
+    int w = (int)box->w;
+    int h = (int)box->h;
     for (int j=0;j<w;j++){
         img[3*( y   *width+x+j)  ] = color[0];
         img[3*( y   *width+x+j)+1] = color[1];

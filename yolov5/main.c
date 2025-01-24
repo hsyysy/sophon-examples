@@ -147,13 +147,15 @@ int main(int argc, char** argv){
     // fill the input_data from resized_img
     // input data is CHW, but resized_img is HWC
     float* input_temp0 = input_data[0] + start_y * net_w + start_x;
+    unsigned temp_w = target_w*channels;
     for (int k=0;k<channels;k++){
         float* input_temp1 = input_temp0 + k*net_area;
+        unsigned char* r_temp1 = resized_img + k;
         for (int i=0;i<target_h;i++){
-            unsigned w_id = i*target_w;
             float* input_temp2 = input_temp1 + i*net_w;
+            unsigned char* r_temp2 = r_temp1 + i*temp_w;
             for (int j=0;j<target_w;j++){
-                input_temp2[j] = (float)resized_img[(w_id+j)*channels + k]/255.0;
+                input_temp2[j] = (float)r_temp2[j*channels]/255.0;
             }
         }
     }

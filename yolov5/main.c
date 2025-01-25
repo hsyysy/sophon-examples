@@ -2,16 +2,23 @@
 #define STBI_NEON
 #endif
 
+#ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#endif
+#ifndef STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb/stb_image_resize2.h"
+#endif
+#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
+#endif
 
 #include <bmruntime_interface.h>
 #include <sys/stat.h>
 #include "utils.h"
+#include "text2img.h"
 
 #define KEEP_ASPECT
 
@@ -313,6 +320,7 @@ int main(int argc, char** argv){
             return 1;
         }
         strcpy(lines[i], buffer);
+        lines[i][strlen(lines[i])-2] = '\0';
         i++;
     }
 
@@ -334,8 +342,9 @@ int main(int argc, char** argv){
             fix_box(box,width,height);
             int color_id = box->class_id % colors_num;
             draw_rect(img,box,width,colors[color_id]);
-            box_id++;
-            printf("class[%02d]: scores = %f, label = %s",box_id,box->score,lines[box->class_id]);
+            put_text(img, width, height, lines[box->class_id], box->x, box->y, 0.5);
+            printf("class[%02d]: scores = %f, label = %s\n",
+                    box_id++,box->score,lines[box->class_id]);
         }
     }
     free(keep);

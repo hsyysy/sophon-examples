@@ -12,7 +12,7 @@ struct image {
 };
 
 struct image* image_create(int w, int h) {
-    struct image *m = malloc(2*sizeof(int) + (size_t)3 * w * h);
+    struct image *m = (struct image *)malloc(2*sizeof(int) + (size_t)3 * w * h);
     m->w = w;
     m->h = h;
     return m;
@@ -24,7 +24,7 @@ struct image* image_load(FILE *in) {
     struct image *m = 0;
     if (fscanf(in, "P6 %d %d 255%c", &w, &h, &c) == 3 && c == '\n') {
         m = image_create(w, h);
-        unsigned num = fread(m->rgb, h * 3, w, in);
+        int num = fread(m->rgb, h * 3, w, in);
         if (num != w) {
             fprintf(stderr, "Error: fread failed to read expected number of elements\n");
             exit(1);

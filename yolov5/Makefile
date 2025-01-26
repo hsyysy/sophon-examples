@@ -1,6 +1,7 @@
 CC = gcc
 LIBSOPHON_DIR = /opt/sophon/libsophon-current
 CFLAGS = -O3
+#CFLAGS += -Wall
 #CFLAGS += -g
 
 # 检查是否支持 sse
@@ -11,7 +12,7 @@ ifeq ($(SSE_SUPPORTED), yes)
     $(info SSE4.1 is supported)
 endif
 
-main:main.c utils.h
+main:main.c utils.h text2img.h yolov5.h
 	${CC} $(CFLAGS) -o $@ main.c -I${LIBSOPHON_DIR}/include -L${LIBSOPHON_DIR}/lib -lbmrt -lbmlib -lm
 
 clean:

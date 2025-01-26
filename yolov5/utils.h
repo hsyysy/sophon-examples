@@ -8,6 +8,9 @@
 #include <arm_neon.h>
 #endif
 
+#include <math.h>
+#include <string.h>
+
 // rect color list
 const int colors[25][3] = {
     {255, 0, 0}, {255, 85, 0}, {255, 170, 0}, {255, 255, 0}, {170, 255, 0}, \
@@ -22,6 +25,17 @@ struct YoloV5Box {
     float x, y, w, h;
     float score;
     unsigned class_id;
+};
+
+struct resize_info {
+    int ori_w;
+    int ori_h;
+    int net_w;
+    int net_h;
+    float ratio_x;
+    float ratio_y;
+    int start_x;
+    int start_y;
 };
 
 // sigmoid function

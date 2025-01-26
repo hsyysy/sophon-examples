@@ -74,7 +74,7 @@ void put_text(unsigned char* img, int width, int height, const char* text, int p
     int new_w = (int)image->w*r;
     int new_h = (int)image->h*r;
 
-    if (new_w > width){
+    if (pos_x + new_w > width){
         new_w = width - pos_x;
         new_h = new_w * (float)image->h / image->w;
     }

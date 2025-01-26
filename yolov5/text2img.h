@@ -3,6 +3,8 @@
 #include "stb/stb_image_resize2.h"
 #endif
 
+#include <stdio.h>
+
 struct image {
     int w;
     int h;
@@ -31,20 +33,20 @@ struct image* image_load(FILE *in) {
     return m;
 }
 
-static void draw_char(struct image *m, int i, int c, struct image *font) {
+static void draw_char(struct image *imag, int i, int c, const struct image *font) {
     if (c < ' ' || c > '~')
         c = ' ';
     int fx = c % 16;
     int fy = c / 16 - 2;
     int fw = font->w / 16;
     int fh = font->h / 6;
-    int offset1 = 3*m->w;
-    int offset2 = 3*font->w;
-    size_t char_size = 3*fw;
-    unsigned char* src = font->rgb + 3*(font->w*fy*fh+fx*fw);
-    unsigned char* dst = m->rgb + char_size*i;
+    int offset1 = 3 * imag->w;
+    int offset2 = 3 * font->w;
+    size_t char_size = 3 * fw;
+          unsigned char* dst = imag->rgb + char_size * i;
+    const unsigned char* src = font->rgb + 3 * ( font->w * fy*fh + fx*fw );
     for (int y = 0; y < fh; y++) {
-        memcpy(dst + offset1 * y, src + offset2 * y,char_size);
+        memcpy(dst + offset1 * y, src + offset2 * y, char_size);
     }
 }
 

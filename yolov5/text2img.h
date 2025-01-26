@@ -31,36 +31,20 @@ struct image* image_load(FILE *in) {
     return m;
 }
 
-void image_set(struct image *m, int x, int y, unsigned long rgb) {
-    size_t i = (size_t)3 * m->w * y + 3 * x;
-    m->rgb[i + 0] = rgb >> 16;
-    m->rgb[i + 1] = rgb >>  8;
-    m->rgb[i + 2] = rgb >>  0;
-}
-
-unsigned long image_get(const struct image *m, int x, int y) {
-    size_t i = (size_t)3 * m->w * y + 3 * x;
-    unsigned long r = m->rgb[i + 0];
-    unsigned long g = m->rgb[i + 1];
-    unsigned long b = m->rgb[i + 2];
-    return (r << 16) | (g << 8) | b;
-}
-
-static void draw_c(struct image *m, int i, int c, const struct image *font, int invert) {
+static void draw_char(struct image *m, int i, int c, struct image *font) {
     if (c < ' ' || c > '~')
         c = ' ';
     int fx = c % 16;
     int fy = c / 16 - 2;
     int fw = font->w / 16;
     int fh = font->h / 6;
-    int bx = fw * i;
+    int offset1 = 3*m->w;
+    int offset2 = 3*font->w;
+    size_t char_size = 3*fw;
+    unsigned char* src = font->rgb + 3*(font->w*fy*fh+fx*fw);
+    unsigned char* dst = m->rgb + char_size*i;
     for (int y = 0; y < fh; y++) {
-        for (int x = 0; x < fw; x++) {
-            size_t sx = fx * fw + x;
-            size_t sy = fy * fh + y;
-            unsigned long rgb = image_get(font, sx, sy);
-            image_set(m, bx + x, y, invert ? -1UL ^ rgb : rgb);
-        }
+        memcpy(dst + offset1 * y, src + offset2 * y,char_size);
     }
 }
 
@@ -73,7 +57,7 @@ struct image* get_textimg(const char* font_file, const char* text){
 
     struct image* image = image_create(font->w/16 * len, font->h/6);
     for (size_t i = 0; i < len; i++) {
-        draw_c(image, i, text[i], font, 0);
+        draw_char(image, i, text[i], font);
     }
 
     free(font);
@@ -102,7 +86,7 @@ void put_text(unsigned char* img, int width, int height, const char* text, int p
     //stbi_write_bmp("text.bmp", new_w, new_h, 3, (void*)resized_img);
 
     for (int i=0;i<new_h;i++){
-        memcpy(img+3*((i+pos_y)*width+pos_x), resized_img + 3*i*new_w,new_w*3*sizeof(unsigned char));
+        memcpy(img+3*((i+pos_y)*width+pos_x), resized_img + 3*i*new_w,3*new_w);
         /*
         for (int j=0;j<new_w;j++){
             float r = (float)resized_img[3*(i*new_w + j)];

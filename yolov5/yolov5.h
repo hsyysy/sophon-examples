@@ -21,36 +21,31 @@
 
 #include "text2img.h"
 
-#define KEEP_ASPECT
-
 void pre_process(const unsigned char* img, float* input_data, struct resize_info* r){
-    int net_area = r->net_w * r->net_h;
     int channels = 3;
-    unsigned char *resized_img = (unsigned char *)malloc(net_area * channels);
 
     // using stb_image_resize to resize
     int target_w = r->net_w, target_h = r->net_h;
-    float ratiox = (float)target_w/r->ori_w;
-    float ratioy = (float)target_h/r->ori_h;
-    int start_x = 0, start_y = 0;
-#ifdef KEEP_ASPECT
-    if (ratiox < ratioy){
-        target_h = (int)(r->ori_h * ratiox);
-        start_y = (int)(r->net_h-target_h)/2;
-        ratioy = ratiox;
-    } else {
-        target_w = (int)(r->ori_w * ratioy);
-        start_x = (int)(r->net_w-target_w)/2;
-        ratiox = ratioy;
+    if (r->keep_aspect){
+        if (r->ratio_x < r->ratio_y){
+            target_h = (int)(r->ori_h * r->ratio_x);
+            r->start_y = (int)(r->net_h-target_h)/2;
+            r->ratio_y = r->ratio_x;
+        } else {
+            target_w = (int)(r->ori_w * r->ratio_y);
+            r->start_x = (int)(r->net_w-target_w)/2;
+            r->ratio_x = r->ratio_y;
+        }
     }
-#endif
+    unsigned char *resized_img = (unsigned char *)malloc(target_w * target_h * channels);
     stbir_resize_uint8_linear(img, r->ori_w, r->ori_h, 0, resized_img, target_w, target_h, 0, STBIR_RGB);
     //stbi_write_bmp("check.bmp", target_w, target_h, channels, (void*)resized_img);
 
     // fill the input_data from resized_img
     // input data is CHW, but resized_img is HWC
-    float* input_temp0 = input_data + start_y * r->net_w + start_x;
+    float* input_temp0 = input_data + r->start_y * r->net_w + r->start_x;
     unsigned temp_w = target_w*channels;
+    int net_area = r->net_w * r->net_h;
     for (int k=0;k<channels;k++){
         float* input_temp1 = input_temp0 + k*net_area;
         unsigned char* r_temp1 = resized_img + k;
@@ -64,10 +59,6 @@ void pre_process(const unsigned char* img, float* input_data, struct resize_info
     }
 
     free(resized_img);
-    r->ratio_x = ratiox;
-    r->ratio_y = ratioy;
-    r->start_x = start_x;
-    r->start_y = start_y;
 }
 
 void post_process(float** output, const char* img_path, unsigned char* img,

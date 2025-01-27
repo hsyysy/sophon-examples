@@ -36,6 +36,7 @@ struct resize_info {
     float ratio_y;
     int start_x;
     int start_y;
+    bool keep_aspect;
 };
 
 // sigmoid function

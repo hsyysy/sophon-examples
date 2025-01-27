@@ -88,12 +88,11 @@ int main(int argc, char** argv){
     r_info.ori_h = height;
     r_info.net_w = net_info->stages[0].input_shapes->dims[3];
     r_info.net_h = net_info->stages[0].input_shapes->dims[2];
-    r_info.ratio_x = 1.0;
-    r_info.ratio_y = 1.0;
+    r_info.ratio_x = (float)r_info.net_w/r_info.ori_w;
+    r_info.ratio_y = (float)r_info.net_h/r_info.ori_h;
     r_info.start_x = 0;
     r_info.start_y = 0;
-    // initialize resized_img
-    int net_area = r_info.net_w*r_info.net_h;
+    r_info.keep_aspect = true;
 
     // prepare input tensor and output tensor
     bm_tensor_t input_tensors[1];
@@ -110,9 +109,10 @@ int main(int argc, char** argv){
                 (long long unsigned int*)&input_data[0]);
         assert(BM_SUCCESS == status);
     } else {
-        input_data[0] = (float*)calloc(channels*net_area,sizeof(float));
+        input_data[0] = (float*)calloc(channels*r_info.net_w*r_info.net_h,sizeof(float));
     }
 
+    // do preprocess and fill input_data
     pre_process(img, input_data[0], &r_info);
 
     // flush the cache or s2d
@@ -154,7 +154,9 @@ int main(int argc, char** argv){
         }
     }
 
+    // do postprocess
     post_process(output, img_path, img, &r_info);
+
     stbi_image_free(img);
 
     if (is_soc){

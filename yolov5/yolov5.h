@@ -19,7 +19,10 @@
 #include <math.h>
 #include <string.h>
 
+#ifndef YOLOV5_H
+#define YOLOV5_H
 #include "text2img.h"
+#include "utils.h"
 
 void pre_process(const unsigned char* img, float* input_data, struct resize_info* r){
     int channels = 3;
@@ -226,3 +229,4 @@ void post_process(float** output, const char* img_path, unsigned char* img,
     // free result box struct
     free(yolobox);
 }
+#endif

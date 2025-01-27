@@ -3,8 +3,6 @@
 #endif
 
 #include <bmruntime_interface.h>
-#include "utils.h"
-
 #include "yolov5.h"
 
 int main(int argc, char** argv){

@@ -24,6 +24,17 @@
 #include "text2img.h"
 #include "utils.h"
 
+const char* CLASS_NAMES[] = {
+    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
+    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
+    "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
+    "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
+    "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
+    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
+    "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
+    "hair drier", "toothbrush"};
+
 void pre_process(const unsigned char* img, float* input_data, struct resize_info* r){
     int channels = 3;
 
@@ -86,7 +97,7 @@ void post_process(float** output, const char* img_path, unsigned char* img,
         int area = feat_h * feat_w;
         int feature_size = area*nout;
         for (int anchor_idx = 0; anchor_idx < anchor_num; anchor_idx++) {
-            float *ptr = output[tidx] + anchor_idx*feature_size;
+            float* ptr = output[tidx] + anchor_idx*feature_size;
             for (int i = 0; i < area; i++) {
                 dst[0] = (sigmoid(ptr[0]) * 2 - 0.5 + i % feat_w) / feat_w * r_info->net_w;
                 dst[1] = (sigmoid(ptr[1]) * 2 - 0.5 + i / feat_w) / feat_h * r_info->net_h;
@@ -139,41 +150,6 @@ void post_process(float** output, const char* img_path, unsigned char* img,
     }
     free(data);
 
-    // get coco names
-    FILE *file = fopen("coco.names", "r");
-    if (file == NULL) {
-        perror("Error opening coco.names");
-        exit(1);
-    }
-    int max_lines = 80;
-    int max_length = 256;
-    // create a pointer to save each line
-    char **lines = (char **)malloc(max_lines * sizeof(char *));
-    if (lines == NULL) {
-        perror("Memory allocation failed");
-        fclose(file);
-        exit(1);
-    }
-    // read each line
-    char buffer[max_length];
-    int i = 0;
-    while (i < max_lines && fgets(buffer, max_length, file) != NULL) {
-        // allocate memory for each line and copy the content
-        lines[i] = (char *)malloc((strlen(buffer) + 1) * sizeof(char));
-        if (lines[i] == NULL) {
-            perror("Memory allocation failed for line");
-            fclose(file);
-            for (int j = 0; j < i; ++j) {
-                free(lines[j]);
-            }
-            free(lines);
-            exit(1);
-        }
-        strcpy(lines[i], buffer);
-        lines[i][strlen(lines[i])-2] = '\0';
-        i++;
-    }
-
     // doing NMS
     float nmsConfidence = 0.6;
     bool* keep = (bool*)malloc(box_i*sizeof(bool));
@@ -192,17 +168,11 @@ void post_process(float** output, const char* img_path, unsigned char* img,
             fix_box(box,r_info->ori_w,r_info->ori_h);
             int color_id = box->class_id % colors_num;
             draw_rect(img,box,r_info->ori_w,colors[color_id]);
-            put_text(img, r_info->ori_w, r_info->ori_h, lines[box->class_id], box->x, box->y, 0.5);
-            printf("class[%02d]: scores = %f, label = %s\n", box_id++,box->score,lines[box->class_id]);
+            put_text(img, r_info->ori_w, r_info->ori_h, CLASS_NAMES[box->class_id], box->x, box->y, 0.5);
+            printf("class[%02d]: scores = %f, label = %s\n", box_id++,box->score,CLASS_NAMES[box->class_id]);
         }
     }
     free(keep);
-
-    // free the memory for coco.names
-    for (int j = 0; j < i; ++j) {
-        free(lines[j]);
-    }
-    free(lines);
 
     // check whether results directory exists
     struct stat st = {0};

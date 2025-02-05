@@ -1,3 +1,6 @@
+#ifndef TEXT2IMG_H
+#define TEXT2IMG_H
+
 #ifndef STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb/stb_image_resize2.h"
@@ -109,3 +112,4 @@ void put_text(unsigned char* img, int width, int height, const char* text, int p
     free(resized_img);
     free(image);
 }
+#endif

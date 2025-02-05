@@ -1,3 +1,6 @@
+#ifndef YOLOV5_H
+#define YOLOV5_H
+
 #ifdef __ARM_NEON
 #define STBI_NEON
 #endif
@@ -18,9 +21,6 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <string.h>
-
-#ifndef YOLOV5_H
-#define YOLOV5_H
 #include "text2img.h"
 #include "utils.h"
 

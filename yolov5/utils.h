@@ -1,4 +1,5 @@
-#include <float.h>
+#ifndef UTILS_H
+#define UTILS_H
 
 #ifdef __SSE4_1__
 #include <smmintrin.h>
@@ -10,6 +11,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <float.h>
 
 // rect color list
 const int colors[25][3] = {
@@ -250,3 +252,4 @@ void get_filename_without_extension(const char *path, char *output) {
         strcpy(output, filename);
     }
 }
+#endif

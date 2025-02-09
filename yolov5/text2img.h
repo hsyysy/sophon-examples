@@ -55,6 +55,10 @@ static void draw_char(struct image *imag, int i, int c, const struct image *font
 
 struct image* get_textimg(const char* font_file, const char* text){
     FILE *fontfile = fopen(font_file, "rb");
+    if (fontfile == NULL){
+	    printf("%s does not exist!\n",font_file);
+	    exit(-1);
+    }
     struct image *font = image_load(fontfile);
     //printf("single char: w = %d, h = %d\n",font->w/16,font->h/6);
     fclose(fontfile);

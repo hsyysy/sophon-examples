@@ -188,11 +188,9 @@ void post_process(float** output, const char* img_path, unsigned char* img,
     char result_name[256];
     char filename_without_extension[256];
     get_filename_without_extension(img_path, filename_without_extension);
-    if (result_name != NULL) {
-        strcpy(result_name, "results/");
-        strcat(result_name, filename_without_extension);
-        strcat(result_name, ".bmp");
-    }
+    strcpy(result_name, "results/");
+    strcat(result_name, filename_without_extension);
+    strcat(result_name, ".bmp");
     stbi_write_bmp(result_name, r_info->ori_w, r_info->ori_h, 3, (void*)img);
     printf("Save result bmp to : %s\n", result_name);
 

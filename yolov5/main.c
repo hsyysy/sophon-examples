@@ -9,9 +9,14 @@ int main(int argc, char** argv){
     // request bm_handle
     bm_handle_t bm_handle;
     bm_status_t status;
+    bool is_1688 = false;
 #if defined(__arm__) || defined(__aarch64__)
     status = bm_dev_request(&bm_handle, 0);
     assert(BM_SUCCESS == status);
+    unsigned p_chipid;
+    bm_get_chipid(bm_handle, &p_chipid);
+    if (p_chipid == 0x1686a200)
+        is_1688 = true;
 #else
     unsigned dev_id = 0;
     int total_dev;
@@ -96,8 +101,11 @@ int main(int argc, char** argv){
     bm_tensor_t input_tensors[1];
     for (int i=0;i<net_info->input_num;i++){
         input_tensors[i].dtype = net_info->input_dtypes[i];
+        if (is_1688)
+            bm_malloc_device_byte(bm_handle, &input_tensors[i].device_mem, net_info->max_input_bytes[i]);
+        else
+            input_tensors[i].device_mem = net_info->stages[0].input_mems[i];
         input_tensors[i].shape = net_info->stages[0].input_shapes[i];
-        input_tensors[i].device_mem = net_info->stages[0].input_mems[i];
         input_tensors[i].st_mode = BM_STORE_1N;
     }
 
@@ -105,7 +113,10 @@ int main(int argc, char** argv){
     for (int i=0;i<net_info->output_num;i++){
         output_tensors[i].dtype = net_info->output_dtypes[i];
         output_tensors[i].shape = net_info->stages[0].output_shapes[i];
-        output_tensors[i].device_mem = net_info->stages[0].output_mems[i];
+        if (is_1688)
+            bm_malloc_device_byte(bm_handle, &output_tensors[i].device_mem, net_info->max_output_bytes[i]);
+        else
+            output_tensors[i].device_mem = net_info->stages[0].output_mems[i];
         output_tensors[i].st_mode = BM_STORE_1N;
     }
 
@@ -174,6 +185,16 @@ int main(int argc, char** argv){
     } else {
         for (int i=0;i<3;i++){
             free(output[i]);
+        }
+    }
+
+    // at last, free device memory
+    if (is_1688){
+        for (int i = 0; i < net_info->input_num; ++i) {
+            bm_free_device(bm_handle, input_tensors[i].device_mem);
+        }
+        for (int i = 0; i < net_info->output_num; ++i) {
+            bm_free_device(bm_handle, output_tensors[i].device_mem);
         }
     }
 

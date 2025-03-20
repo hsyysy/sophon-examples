@@ -94,11 +94,20 @@ int main(int argc, char** argv){
 
     // prepare input tensor and output tensor
     bm_tensor_t input_tensors[1];
-    bmrt_tensor(&input_tensors[0],p_bmrt,net_info->input_dtypes[0],net_info->stages[0].input_shapes[0]);
+    for (int i=0;i<net_info->input_num;i++){
+        input_tensors[i].dtype = net_info->input_dtypes[i];
+        input_tensors[i].shape = net_info->stages[0].input_shapes[i];
+        input_tensors[i].device_mem = net_info->stages[0].input_mems[i];
+        input_tensors[i].st_mode = BM_STORE_1N;
+    }
 
     bm_tensor_t output_tensors[3];
-    for (int i=0;i<3;i++)
-        bm_malloc_device_byte(bm_handle, &output_tensors[i].device_mem, net_info->max_output_bytes[i]);
+    for (int i=0;i<net_info->output_num;i++){
+        output_tensors[i].dtype = net_info->output_dtypes[i];
+        output_tensors[i].shape = net_info->stages[0].output_shapes[i];
+        output_tensors[i].device_mem = net_info->stages[0].output_mems[i];
+        output_tensors[i].st_mode = BM_STORE_1N;
+    }
 
     // prepare input data memory
     float* input_data[1];
@@ -168,13 +177,6 @@ int main(int argc, char** argv){
         }
     }
 
-    // at last, free device memory
-    for (int i = 0; i < net_info->input_num; ++i) {
-        bm_free_device(bm_handle, input_tensors[i].device_mem);
-    }
-    for (int i = 0; i < net_info->output_num; ++i) {
-        bm_free_device(bm_handle, output_tensors[i].device_mem);
-    }
     free(net_names);
     bmrt_destroy(p_bmrt);
     bm_dev_free(bm_handle);
